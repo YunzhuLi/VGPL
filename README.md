@@ -8,7 +8,7 @@ Yunzhu Li, Toru Lin*, Kexin Yi*, Daniel M. Bear, Daniel L. K. Yamins, Jiajun Wu,
 
 ## Evaluate the trained model on the test data
 
-Download the test data from the following links. Unzip and put them in the `data/` folder.
+Create a folder named `data/` in the project folder and download the test data from the following links. Unzip and put them in `data/`.
 - MassRope [[DropBox]](https://www.dropbox.com/s/l3fx5onv21ti72p/data_MassRope_valid.zip?dl=0) (2.8 GB)
 - RigidFall [[DropBox]](https://www.dropbox.com/s/o3ehs4s4p13kuy6/data_RigidFall_valid.zip?dl=0) (7.35 GB)
 
@@ -67,7 +67,7 @@ For training the dynamics-guided inference module, we have provided the followin
     scripts/parameter/train_RigidFall_param.sh
     scripts/position/train_RigidFall_pos.sh
     
-To obtain the training data, which is about nine times larger than the test data, please contact me through `liyunzhu@mit.edu`.
+To obtain the training data, which is about nine times the size of the test data, please contact me through `liyunzhu@mit.edu`.
 
 
 ## Citing VGPL
