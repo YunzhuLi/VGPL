@@ -604,9 +604,9 @@ class PhysicsFleXDataset(Dataset):
         # self.perception_dir = os.path.join(self.args.dataf, 'perception', loss_dir, phase)
 
         if args.env in ['RigidFall']:
-            perception_dir = '/data/vision/billf/scratch/kyi/projects/dpi/image2particles/outputs/01-30-20/rigid_4frame_30eval_l2_epoch1/eval'
+            perception_dir = 'data/data_RigidFall/perception/l2/'
         elif args.env in ['MassRope']:
-            perception_dir = '/data/vision/billf/scratch/kyi/projects/dpi/image2particles/outputs/01-30-20/rope_4frame_30eval_l2_epoch1/eval'
+            perception_dir = 'data/data_MassRope/perception/l2/'
 
         self.perception_dir = os.path.join(perception_dir, phase)
 
