@@ -1,31 +1,33 @@
-Visual Grounding of Learned Dyanmics Model
-============
+# Visual Grounding of Learned Physical Models
 
-Running PyFleX example
-----------------------
+Yunzhu Li, Toru Lin*, Kexin Yi*, Daniel M. Bear, Daniel L. K. Yamins, Jiajun Wu, Joshua B. Tenenbaum, and Antonio Torralba
 
-Add and compile PyFleX submodule
+**ICML 2020**
+[[website]](http://visual-physics-grounding.csail.mit.edu/) [[paper]](https://arxiv.org/abs/2004.13664) [[video]](https://www.youtube.com/watch?v=P_LrG0lzc-0&feature=youtu.be)
 
-    git submodule update --init --recursive
-    export PYFLEXROOT=${PWD}/PyFleX-dev
-    export PYTHONPATH=${PYFLEXROOT}/bindings/build:$PYTHONPATH
-    export LD_LIBRARY_PATH=${PYFLEXROOT}/external/SDL2-2.0.4/lib/x64:$LD_LIBRARY_PATH
-    cd PyFleX-dev/bindings; mkdir build; cd build; cmake ..; make -j
 
-Test PyFleX examples
+## Evaluate the trained model on the validation data
 
-    python -c "import pyflex; pyflex.main()"
-    cd ${PYFLEXROOT}/bindings/examples; python test_RigidFall.py
+Link to validation data
+- MassRope [[DropBox]](https://www.dropbox.com/s/l3fx5onv21ti72p/data_MassRope_valid.zip?dl=0) (2.8 GB)
+- RigidFall [[DropBox]](https://www.dropbox.com/s/o3ehs4s4p13kuy6/data_RigidFall_valid.zip?dl=0) (7.35 GB)
+
+Dynamics
+
+    bash scripts/dynamics/eval_MassRope_dy.sh
+    bash scripts/dynamics/eval_RigidFall_dy.sh
     
+Parameter Estimation
 
-Running the model
-----------------------------------------------
+    bash scripts/parameter/eval_MassRope_param.sh
+    bash scripts/parameter/eval_RigidFall_param.sh
+    
+Position Refinement and Rigidness estimation
 
-Available scripts
+    bash scripts/position/eval_MassRope_pos.sh
+    bash scripts/position/eval_RigidFall_pos.sh
 
-    bash scripts/train_RigidFall_dy.sh
-    bash scripts/train_FluidIceShake_dy.sh
-    bash scripts/eval_RigidFall_dy.sh
-    bash scripts/eval_FluidIceShake_dy.sh
+Forward prediction after dynamics-guided inference
 
-
+    bash scripts/forward/eval_MassRope_fwd.sh
+    bash scripts/forward/eval_RigidFall_fwd.sh
