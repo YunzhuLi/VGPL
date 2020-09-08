@@ -10,4 +10,4 @@ python eval_fwd.py		\
 	--sequence_length 30	\
 	--augment 0.05		\
 	--discard_frames 20	\
-	--vispy 0		\
+	--vispy 1		\

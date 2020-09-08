@@ -89,7 +89,7 @@ if use_gpu:
 particle_dist_loss = torch.nn.MSELoss()
 
 
-infos = np.arange(50)
+infos = np.arange(10)
 phase = 'valid'
 st_idx = 30
 ed_idx = st_idx + args.sequence_length
@@ -97,8 +97,6 @@ observ_length = 10
 
 
 loss_refined_fwd = []
-loss_percept_fwd = []
-loss_woParam_fwd = []
 
 for idx_episode in range(len(infos)):
 
@@ -323,137 +321,6 @@ for idx_episode in range(len(infos)):
 
 
     '''
-    future prediction without position refinement
-    '''
-
-    loss_percept_fwd_cur = []
-    particles_percept_fwd = []
-
-    with torch.set_grad_enabled(False):
-        # if env is RigidFall, all particles are rigid particles, use ground truth p_rigid
-        if args.env == 'RigidFall':
-            groups_refined = groups_gt[0], p_instance, physics_param
-        else:
-            groups_refined = p_rigid, p_instance, physics_param
-
-        ''' loss on particle positions after dynamics prediction '''
-        # calculate graph
-        loss_nxt = 0
-        loss_counter = 0
-        n_forward_prediction_step = args.sequence_length - observ_length
-
-        for batch_idx in range(B):
-            # state_cur: 1 x n_his x (n_p + n_s) x state_dim
-            state_cur = particles_percept[batch_idx:batch_idx + 1, observ_length - n_his:observ_length]
-            state_cur = state_cur.view(1, n_his, n_particle + n_shape, args.state_dim)
-
-            for step_idx in range(observ_length, seq_length):
-
-                # Rr_cur, Rs_cur: n_rel x (n_p + n_s)
-                _, _, Rr_cur, Rs_cur = prepare_input(state_cur[0, -1], n_particle, n_shape, args, var=True)
-                Rr_cur = torch.FloatTensor(Rr_cur).cuda()
-                Rs_cur = torch.FloatTensor(Rs_cur).cuda()
-
-                if use_gpu:
-                    Rr_cur = Rr_cur.cuda()
-                    Rs_cur = Rs_cur.cuda()
-
-                group_cur = [d[batch_idx:batch_idx + 1, 0] for d in groups_refined]
-
-                inputs = [attrs[0:1], state_cur, Rr_cur[None, ...], Rs_cur[None, ...], memory_init[0:1], group_cur]
-
-                # predict the next step using the dynamics model
-                # pred_pos (unnormalized): 1 x n_p x state_dim
-                # pred_motion_norm (normalized): 1 x n_p x state_dim
-                pred_pos, pred_motion_norm = model.predict_dynamics(inputs)
-
-                # append the predicted particle position to state_cur
-                # pred_pose: 1 x (n_p + n_s) x state_dim
-                # state_cur: 1 x n_his x (n_p + n_s) x state_dim
-                pred_pos = torch.cat([pred_pos, particles_gt[batch_idx:batch_idx + 1, step_idx, n_particle:]], 1)
-                state_cur = torch.cat([state_cur[:, 1:], pred_pos.unsqueeze(1)], 1)
-
-                # state_pred: 1 x n_p x state_dim
-                # state_gt: 1 x n_p x state_dim
-                state_pred = state_cur[:, -1, :n_particle]
-                state_gt = particles_gt[batch_idx:batch_idx + 1, step_idx, :n_particle]
-
-                loss_percept_fwd_cur.append(F.mse_loss(state_pred, state_gt).item())
-                particles_percept_fwd.append(state_pred[0].data.cpu().numpy())
-
-    loss_percept_fwd.append(loss_percept_fwd_cur)
-
-
-
-    '''
-    future prediction without parameter estimation - random param
-    '''
-
-    loss_woParam_fwd_cur = []
-    particles_woParam_fwd = []
-
-    with torch.set_grad_enabled(False):
-        # if env is RigidFall, all particles are rigid particles, use ground truth p_rigid
-        physics_param_rand = torch.rand(1, 1, 1) * 2. - 1.
-        physics_param_rand = physics_param_rand.repeat(1, observ_length, n_particle)
-
-        if use_gpu:
-            physics_param_rand = physics_param_rand.cuda()
-
-        if args.env == 'RigidFall':
-            groups_refined = groups_gt[0], p_instance, physics_param_rand
-        else:
-            groups_refined = p_rigid, p_instance, physics_param_rand
-
-        ''' loss on particle positions after dynamics prediction '''
-        # calculate graph
-        loss_nxt = 0
-        loss_counter = 0
-        n_forward_prediction_step = args.sequence_length - observ_length
-
-        for batch_idx in range(B):
-            # state_cur: 1 x n_his x (n_p + n_s) x state_dim
-            state_cur = particles_refined[batch_idx:batch_idx + 1, observ_length - n_his:observ_length]
-            state_cur = state_cur.view(1, n_his, n_particle + n_shape, args.state_dim)
-
-            for step_idx in range(observ_length, seq_length):
-
-                # Rr_cur, Rs_cur: n_rel x (n_p + n_s)
-                _, _, Rr_cur, Rs_cur = prepare_input(state_cur[0, -1], n_particle, n_shape, args, var=True)
-                Rr_cur = torch.FloatTensor(Rr_cur).cuda()
-                Rs_cur = torch.FloatTensor(Rs_cur).cuda()
-
-                if use_gpu:
-                    Rr_cur = Rr_cur.cuda()
-                    Rs_cur = Rs_cur.cuda()
-
-                group_cur = [d[batch_idx:batch_idx + 1, 0] for d in groups_refined]
-
-                inputs = [attrs[0:1], state_cur, Rr_cur[None, ...], Rs_cur[None, ...], memory_init[0:1], group_cur]
-
-                # predict the next step using the dynamics model
-                # pred_pos (unnormalized): 1 x n_p x state_dim
-                # pred_motion_norm (normalized): 1 x n_p x state_dim
-                pred_pos, pred_motion_norm = model.predict_dynamics(inputs)
-
-                # append the predicted particle position to state_cur
-                # pred_pose: 1 x (n_p + n_s) x state_dim
-                # state_cur: 1 x n_his x (n_p + n_s) x state_dim
-                pred_pos = torch.cat([pred_pos, particles_gt[batch_idx:batch_idx + 1, step_idx, n_particle:]], 1)
-                state_cur = torch.cat([state_cur[:, 1:], pred_pos.unsqueeze(1)], 1)
-
-                # state_pred: 1 x n_p x state_dim
-                # state_gt: 1 x n_p x state_dim
-                state_pred = state_cur[:, -1, :n_particle]
-                state_gt = particles_gt[batch_idx:batch_idx + 1, step_idx, :n_particle]
-
-                loss_woParam_fwd_cur.append(F.mse_loss(state_pred, state_gt).item())
-                particles_woParam_fwd.append(state_pred[0].data.cpu().numpy())
-
-    loss_woParam_fwd.append(loss_woParam_fwd_cur)
-
-
-    '''
     render results
     '''
 
@@ -614,23 +481,17 @@ for idx_episode in range(len(infos)):
         '''
         #0 - particles_gt_fwd
         #1 - particles_refined_fwd
-        #2 - particles_percept_fwd
-        #3 - particles_woParam_fwd
-        #4 - images_fwd
+        #2 - images_fwd
 
         # particles: (seq_length - observ_length) x n_p x 3
         # images: (seq_length - observ_length) x H x W x 3
 
         particles_gt_fwd = particles_gt[0, observ_length:].data.cpu().numpy()
         particles_refined_fwd = np.stack(particles_refined_fwd)
-        particles_percept_fwd = np.stack(particles_percept_fwd)
-        particles_woParam_fwd = np.stack(particles_woParam_fwd)
         images_fwd = data_vision[1][observ_length:]
 
         print('particles_gt_fwd', particles_gt_fwd.shape)
         print('particles_refined_fwd', particles_refined_fwd.shape)
-        print('particles_percept_fwd', particles_percept_fwd.shape)
-        print('particles_woParam_fwd', particles_woParam_fwd.shape)
         print('images_fwd', images_fwd.shape)
 
         vis_length = seq_length - observ_length
@@ -689,31 +550,9 @@ for idx_episode in range(len(infos)):
 
             elif vis_length <= t_step < vis_length * 2:
                 if t_step == vis_length:
-                    print("Rendering perception result")
-
-                t_actual = t_step - vis_length
-
-                colors = convert_groups_to_colors(
-                    [None if d is None else d[0] for d in groups_percept],
-                    n_particle, args.n_instance,
-                    instance_colors=instance_colors, env=args.env)
-
-                colors = np.clip(colors, 0., 1.)
-
-                p1.set_data(particles_percept_fwd[t_actual, :n_particle],
-                            edge_color='black', face_color=colors)
-
-                # render for perception result
-                img = c.render()
-                img_path = os.path.join(vispy_dir, "percept_{}_{}.png".format(str(idx_episode), str(t_actual)))
-                vispy.io.write_png(img_path, img)
-
-
-            elif vis_length * 2 <= t_step < vis_length * 3:
-                if t_step == vis_length * 2:
                     print("Rendering refinement result")
 
-                t_actual = t_step - vis_length * 2
+                t_actual = t_step - vis_length
 
                 colors = convert_groups_to_colors(
                     [None if d is None else d[0] for d in groups_refined],
@@ -731,28 +570,6 @@ for idx_episode in range(len(infos)):
                 vispy.io.write_png(img_path, img)
 
 
-            elif vis_length * 3 <= t_step < vis_length * 4:
-                if t_step == vis_length * 3:
-                    print("Rendering woParam result")
-
-                t_actual = t_step - vis_length * 3
-
-                colors = convert_groups_to_colors(
-                    [None if d is None else d[0] for d in groups_percept],
-                    n_particle, args.n_instance,
-                    instance_colors=instance_colors, env=args.env)
-
-                colors = np.clip(colors, 0., 1.)
-
-                p1.set_data(particles_woParam_fwd[t_actual, :n_particle],
-                            edge_color='black', face_color=colors)
-
-                # render for refinement
-                img = c.render()
-                img_path = os.path.join(vispy_dir, "woParam_{}_{}.png".format(str(idx_episode), str(t_actual)))
-                vispy.io.write_png(img_path, img)
-
-
             else:
                 # discarded frames
                 pass
@@ -764,7 +581,7 @@ for idx_episode in range(len(infos)):
         # start animation
         timer = app.Timer()
         timer.connect(update)
-        timer.start(interval=1. / 60., iterations=vis_length * 4)
+        timer.start(interval=1. / 60., iterations=vis_length * 2)
 
         c.show()
         app.run()
@@ -776,27 +593,21 @@ for idx_episode in range(len(infos)):
             fourcc = cv2.VideoWriter_fourcc(*'MJPG')
             out = cv2.VideoWriter(
                 os.path.join(args.evalf, 'vid_%d_%d_vispy.avi' % (args.discard_frames, idx_episode)),
-                fourcc, 3, (800 * 5, 600))
+                fourcc, 3, (800 * 3, 600))
 
             for step in range(vis_length):
                 vision_path = os.path.join(args.evalf, 'vispy', 'vision_%d_%d.png' % (idx_episode, step))
-                percept_path = os.path.join(args.evalf, 'vispy', 'percept_%d_%d.png' % (idx_episode, step))
                 refined_path = os.path.join(args.evalf, 'vispy', 'refined_%d_%d.png' % (idx_episode, step))
-                woParam_path = os.path.join(args.evalf, 'vispy', 'woParam_%d_%d.png' % (idx_episode, step))
                 gt_path = os.path.join(args.evalf, 'vispy', 'gt_%d_%d.png' % (idx_episode, step))
 
                 vision = cv2.imread(vision_path)
-                percept = cv2.imread(percept_path)
                 refined = cv2.imread(refined_path)
-                woParam = cv2.imread(woParam_path)
                 gt = cv2.imread(gt_path)
 
-                frame = np.zeros((600, 800 * 5, 3), dtype=np.uint8)
+                frame = np.zeros((600, 800 * 3, 3), dtype=np.uint8)
                 frame[:, :800] = vision
-                frame[:, 800:1600] = percept
-                frame[:, 1600:2400] = woParam
-                frame[:, 2400:3200] = refined
-                frame[:, 3200:] = gt
+                frame[:, 800:1600] = refined
+                frame[:, 1600:2400] = gt
 
                 out.write(frame)
 
@@ -814,34 +625,14 @@ rec_path = os.path.join(args.evalf, 'loss_refined_fwd.npy')
 print('Save results to %s' % rec_path)
 np.save(rec_path, loss_refined_fwd)
 
-loss_percept_fwd = np.array(loss_percept_fwd) * scale
-loss_percept_fwd = np.transpose(loss_percept_fwd, (1, 0))
-rec_path = os.path.join(args.evalf, 'loss_percept_fwd.npy')
-print('Save results to %s' % rec_path)
-np.save(rec_path, loss_percept_fwd)
-
-loss_woParam_fwd = np.array(loss_woParam_fwd) * scale
-loss_woParam_fwd = np.transpose(loss_woParam_fwd, (1, 0))
-rec_path = os.path.join(args.evalf, 'loss_woParam_fwd.npy')
-print('Save results to %s' % rec_path)
-np.save(rec_path, loss_woParam_fwd)
-
-
 
 ''' print the results '''
 
 print('loss_refined_fwd', loss_refined_fwd.shape)
-print('loss_percept_fwd', loss_percept_fwd.shape)
-print('loss_woParam_fwd', loss_woParam_fwd.shape)
 
 print()
-print('step , ours , woRefine , woParamEst')
-
 for i in range(seq_length - observ_length):
-    print(i,
-          ', %.4f (%.4f)' % (np.mean(loss_refined_fwd[i]), np.std(loss_refined_fwd[i])),
-          ', %.4f (%.4f)' % (np.mean(loss_percept_fwd[i]), np.std(loss_percept_fwd[i])),
-          ', %.4f (%.4f)' % (np.mean(loss_woParam_fwd[i]), np.std(loss_woParam_fwd[i])))
+    print(i, ', %.4f (%.4f)' % (np.mean(loss_refined_fwd[i]), np.std(loss_refined_fwd[i])))
 
 
 
