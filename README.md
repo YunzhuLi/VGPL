@@ -22,8 +22,14 @@ Type the following commands to evaluate the dynamics prior. You can also take a 
 You will be able to generate videos like the following
 
 ![](imgs/MassRope_dy.gif)  ![](imgs/RigidFall_dy.gif)
+
+### 2. Visual Prior
+
+Please check [[VGPL-Visual-Prior]](https://github.com/ToruOwO/VGPL-Visual-Prior) for details of the visual prior, which estimates the particle positions and groupings from the visual observations.
+
+For the ease of evaluation, we have included the visual prior's prediction results in the test data you just downloaded: `data_[ENV]/perception/l2`. You can proceed to run the commands in the following sections to see the evaluation results of the inference module.
     
-### 2. Parameter Estimation
+### 3. Parameter Estimation
 
 Type the following command to evaluate the model's performance on parameter estimation on 50 testing examples.
 
@@ -33,7 +39,7 @@ Type the following command to evaluate the model's performance on parameter esti
 - MassRope: Average error ratio: 2.8812% (std: 1.2736)
 - RigidFall: Average error ratio: 3.7455% (std: 2.6649)
     
-### 3. Position Refinement and Rigidness estimation
+### 4. Position Refinement and Rigidness estimation
 
 Type the following command to evaluate the model's performance on position refinement and rigidness estimation on 50 testing examples.
 
@@ -44,7 +50,7 @@ Position Mean Squared Error (scaled by 1e4):
 - MassRope: Before refinement 1.9584, After refinement 0.4782
 - RigidFall: Before refinement 1.9700, After refinement 1.4500
 
-### 4. Forward prediction using the inference results
+### 5. Forward prediction using the inference results
 
 Type the following command to evaluate the model's performance on forward prediction using the inference results.
 
@@ -58,6 +64,8 @@ The generated videos are stored in `dump/dump_{ENV}/eval_forward*`. The followin
 ## Train the model
 
 For training the dynamics prior, please refer to [[VGPL-Dynamics-Prior]](https://github.com/YunzhuLi/VGPL-Dynamics-Prior), which we prepared as a stand-alone module for dynamics prediction.
+
+For training the visual prior, please refer to [[VGPL-Visual-Prior]](https://github.com/ToruOwO/VGPL-Visual-Prior).
 
 For training the dynamics-guided inference module, we have provided the following training scripts
 
